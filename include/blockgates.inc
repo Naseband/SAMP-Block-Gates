@@ -20,7 +20,7 @@
 	Functions:
 
 	IsValidBlockGate(id)
-	CreateBlockGate(modelid, Float:modelsize, Float:x, Float:y, Float:z, Float:rx, Float:ry, Float:rz, width = 8, height = 4, initial_state = BGATE_STATE_CLOSED, Float:speed = 1.0, worldid = 0, interiorid = 0, playerid = -1, Float:streamdistance = 250.0, Float:drawdistance = 250.0, Float:ob_rx = FLOAT_INFINITY, Float:ob_ry = FLOAT_INFINITY, Float:ob_rz = FLOAT_INFINITY, Float:ob_side_off_mul = 0.5)
+	CreateBlockGate(modelid, Float:modelsize, Float:x, Float:y, Float:z, Float:rx, Float:ry, Float:rz, width = 8, height = 4, Float:speed = 1.0, Float:areasize = 10.0, worldid = 0, interiorid = 0, playerid = -1, Float:streamdistance = 250.0, Float:drawdistance = 250.0, Float:ob_rx = FLOAT_INFINITY, Float:ob_ry = FLOAT_INFINITY, Float:ob_rz = FLOAT_INFINITY, Float:ob_side_off_mul = 0.5)
 	DestroyBlockGate(id)
 
 	AddBlockGateAnimStep(id, pattern, num_front, num_right, num_up, extra_delay = 200)
@@ -196,6 +196,8 @@ public OnPlayerEnterDynamicArea(playerid, STREAMER_TAG_AREA areaid)
 {
 	new id = Streamer_GetIntData(STREAMER_TYPE_AREA, areaid, E_STREAMER_EXTRA_ID);
 
+	print("entered");
+
 	if(IsValidBlockGate(id) && gBlockGateData[id][bgateAreaID] == areaid)
 	{
 		OpenBlockGate(id);
@@ -259,7 +261,7 @@ stock IsValidBlockGate(id)
 	return 1;
 }
 
-stock CreateBlockGate(modelid, Float:modelsize, Float:x, Float:y, Float:z, Float:rx, Float:ry, Float:rz, width = 8, height = 4, initial_state = BGATE_STATE_CLOSED, Float:speed = 1.0, worldid = 0, interiorid = 0, playerid = -1, Float:streamdistance = 250.0, Float:drawdistance = 250.0, Float:ob_rx = FLOAT_INFINITY, Float:ob_ry = FLOAT_INFINITY, Float:ob_rz = FLOAT_INFINITY, Float:ob_side_off_mul = 0.5)
+stock CreateBlockGate(modelid, Float:modelsize, Float:x, Float:y, Float:z, Float:rx, Float:ry, Float:rz, width = 8, height = 4, Float:speed = 1.0, Float:areasize = 10.0, worldid = 0, interiorid = 0, playerid = -1, Float:streamdistance = 250.0, Float:drawdistance = 250.0, Float:ob_rx = FLOAT_INFINITY, Float:ob_ry = FLOAT_INFINITY, Float:ob_rz = FLOAT_INFINITY, Float:ob_side_off_mul = 1.0)
 {
 	if(width < 1 || height < 1 || width * height > MAX_BLOCK_GATE_OBJECTS) return -1;
 
@@ -274,8 +276,8 @@ stock CreateBlockGate(modelid, Float:modelsize, Float:x, Float:y, Float:z, Float
 	if(id == -1) return -1;
 
 	gBlockGateData[id][bgateUsed] = true;
-	gBlockGateData[id][bgateState] = BGATE_STATE_OPEN;
-	gBlockGateData[id][bgateNextState] = initial_state;
+	gBlockGateData[id][bgateState] = BGATE_STATE_CLOSED;
+	gBlockGateData[id][bgateNextState] = BGATE_STATE_CLOSED;
 	gBlockGateData[id][bgateNumX] = width;
 	gBlockGateData[id][bgateNumZ] = height;
 	gBlockGateData[id][bgateSpeed] = speed;
@@ -295,8 +297,15 @@ stock CreateBlockGate(modelid, Float:modelsize, Float:x, Float:y, Float:z, Float
 	gBlockGateData[id][bgateAnimMode] = BGATE_AMODE_ORDERED;
 	gBlockGateData[id][bgateNumUsages] = 0;
 
-	gBlockGateData[id][bgateAreaID] = CreateDynamicSphere(x, y, z, 10.0, worldid, interiorid, playerid);
-	Streamer_SetIntData(STREAMER_TYPE_AREA, gBlockGateData[id][bgateAreaID], E_STREAMER_EXTRA_ID, id);
+	if(areasize > 0.0)
+	{
+		gBlockGateData[id][bgateAreaID] = CreateDynamicSphere(x, y, z, areasize, worldid, interiorid, playerid);
+		Streamer_SetIntData(STREAMER_TYPE_AREA, gBlockGateData[id][bgateAreaID], E_STREAMER_EXTRA_ID, id);
+	}
+	else
+	{
+		gBlockGateData[id][bgateAreaID] = -1;
+	}
 
 	new Float:matrix[4][4];
 	GetRotationMatrixFromEuler(matrix, rx, ry, rz, euler_samp);
@@ -331,8 +340,6 @@ stock CreateBlockGate(modelid, Float:modelsize, Float:x, Float:y, Float:z, Float
 	}
 
 	gBlockGateData[id][bgateNumObjects] = num;
-
-	if(initial_state != BGATE_STATE_OPEN) CloseBlockGate(id);
 
 	return id;
 }
