@@ -38,7 +38,7 @@ CMD:bg(playerid, const params[])
 
 	// Create a block gate at the current position and facing angle
 
-	new id = CreateBlockGate(model, modelsize, x, y, z - 0.5, 0.0, 0.0, a, 10, 10, BGATE_STATE_CLOSED, speed);
+	new id = CreateBlockGate(model, modelsize, x, y, z - 0.5, 0.0, 0.0, a, 10, 10, speed);
 
 	// Apply some textures
 
