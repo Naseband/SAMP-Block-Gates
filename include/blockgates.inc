@@ -20,7 +20,7 @@
 	Functions:
 
 	IsValidBlockGate(id)
-	CreateBlockGate(modelid, Float:modelsize, Float:x, Float:y, Float:z, Float:rx, Float:ry, Float:rz, width = 8, height = 4, Float:speed = 1.0, Float:areasize = 10.0, worldid = 0, interiorid = 0, playerid = -1, Float:streamdistance = 250.0, Float:drawdistance = 250.0, Float:ob_rx = FLOAT_INFINITY, Float:ob_ry = FLOAT_INFINITY, Float:ob_rz = FLOAT_INFINITY, Float:ob_side_off_mul = 0.5)
+	CreateBlockGate(modelid, Float:modelsize_x, Float:modelsize_y, Float:modelsize_z, Float:x, Float:y, Float:z, Float:rx, Float:ry, Float:rz, width = 8, height = 4, Float:speed = 1.0, Float:areasize = 10.0, worldid = 0, interiorid = 0, playerid = -1, Float:streamdistance = 250.0, Float:drawdistance = 250.0, Float:ob_rx = FLOAT_INFINITY, Float:ob_ry = FLOAT_INFINITY, Float:ob_rz = FLOAT_INFINITY, Float:ob_side_off_mul = 0.5)
 	DestroyBlockGate(id)
 
 	AddBlockGateAnimStep(id, pattern, num_right, num_front, num_up, extra_delay = 200, Float:speed_mul = 1.0)
@@ -87,7 +87,9 @@ enum E_BLOCK_GATE
 	Float:bgateSpeed,
 
 	bgateModelID,
-	Float:bgateModelSize,
+	Float:bgateModelSizeX,
+	Float:bgateModelSizeY,
+	Float:bgateModelSizeZ,
 
 	Float:bgateX,
 	Float:bgateY,
@@ -265,7 +267,7 @@ stock IsValidBlockGate(id)
 	return 1;
 }
 
-stock CreateBlockGate(modelid, Float:modelsize, Float:x, Float:y, Float:z, Float:rx, Float:ry, Float:rz, width = 8, height = 4, Float:speed = 1.0, Float:areasize = 10.0, worldid = 0, interiorid = 0, playerid = -1, Float:streamdistance = 250.0, Float:drawdistance = 250.0, Float:ob_rx = FLOAT_INFINITY, Float:ob_ry = FLOAT_INFINITY, Float:ob_rz = FLOAT_INFINITY, Float:ob_side_off_mul = 1.0)
+stock CreateBlockGate(modelid, Float:modelsize_x, Float:modelsize_y, Float:modelsize_z, Float:x, Float:y, Float:z, Float:rx, Float:ry, Float:rz, width = 8, height = 4, Float:speed = 1.0, Float:areasize = 10.0, worldid = 0, interiorid = 0, playerid = -1, Float:streamdistance = 250.0, Float:drawdistance = 250.0, Float:ob_rx = FLOAT_INFINITY, Float:ob_ry = FLOAT_INFINITY, Float:ob_rz = FLOAT_INFINITY, Float:ob_side_off_mul = 1.0)
 {
 	if(width < 1 || height < 1 || width * height > MAX_BLOCK_GATE_OBJECTS) return -1;
 
@@ -287,7 +289,9 @@ stock CreateBlockGate(modelid, Float:modelsize, Float:x, Float:y, Float:z, Float
 	gBlockGateData[id][bgateSpeed] = speed;
 
 	gBlockGateData[id][bgateModelID] = modelid;
-	gBlockGateData[id][bgateModelSize] = modelsize;
+	gBlockGateData[id][bgateModelSizeX] = modelsize_x;
+	gBlockGateData[id][bgateModelSizeY] = modelsize_y;
+	gBlockGateData[id][bgateModelSizeZ] = modelsize_z;
 
 	gBlockGateData[id][bgateX] = x;
 	gBlockGateData[id][bgateY] = y;
@@ -328,15 +332,15 @@ stock CreateBlockGate(modelid, Float:modelsize, Float:x, Float:y, Float:z, Float
 
 	// Get the vectors for left/right, front/back and up/down directions, easier and faster for later use. Block Gates can be created at any rotation.
 
-	MatrixRotate(matrix, 0.0, modelsize, 0.0, 0.0, gBlockGateData[id][bgateVecFrontX], gBlockGateData[id][bgateVecFrontY], gBlockGateData[id][bgateVecFrontZ]);
-	MatrixRotate(matrix, modelsize, 0.0, 0.0, 0.0, gBlockGateData[id][bgateVecRightX], gBlockGateData[id][bgateVecRightY], gBlockGateData[id][bgateVecRightZ]);
-	MatrixRotate(matrix, 0.0, 0.0, modelsize, 0.0, gBlockGateData[id][bgateVecUpX], gBlockGateData[id][bgateVecUpY], gBlockGateData[id][bgateVecUpZ]);
+	MatrixRotate(matrix, modelsize_x, 0.0, 0.0, 0.0, gBlockGateData[id][bgateVecRightX], gBlockGateData[id][bgateVecRightY], gBlockGateData[id][bgateVecRightZ]);
+	MatrixRotate(matrix, 0.0, modelsize_y, 0.0, 0.0, gBlockGateData[id][bgateVecFrontX], gBlockGateData[id][bgateVecFrontY], gBlockGateData[id][bgateVecFrontZ]);
+	MatrixRotate(matrix, 0.0, 0.0, modelsize_z, 0.0, gBlockGateData[id][bgateVecUpX], gBlockGateData[id][bgateVecUpY], gBlockGateData[id][bgateVecUpZ]);
 
 	// Check object rot
 
-	if(ob_rx == FLOAT_INFINITY) ob_rx = rx;
-	if(ob_ry == FLOAT_INFINITY) ob_ry = ry;
-	if(ob_rz == FLOAT_INFINITY) ob_rz = rz;
+	if(ob_rx == FLOAT_INFINITY) ob_rx = 0.0;
+	if(ob_ry == FLOAT_INFINITY) ob_ry = 0.0;
+	if(ob_rz == FLOAT_INFINITY) ob_rz = 0.0;
 
 	// Create all objects.
 
@@ -349,7 +353,7 @@ stock CreateBlockGate(modelid, Float:modelsize, Float:x, Float:y, Float:z, Float
 	{
 		for(new ob_z = 0; ob_z < height; ob_z ++)
 		{
-			new objectid = CreateDynamicObject(modelid, x + BGV_R_X(id) * ob_x + BGV_U_X(id) * ob_z + off_x, y + BGV_R_Y(id) * ob_x + BGV_U_Y(id) * ob_z + off_y, z + BGV_R_Z(id) * ob_x + BGV_U_Z(id) * ob_z + off_z, ob_rx, ob_ry, ob_rz, worldid, interiorid, playerid, streamdistance, drawdistance);
+			new objectid = CreateDynamicObject(modelid, x + BGV_R_X(id) * ob_x + BGV_U_X(id) * ob_z + off_x, y + BGV_R_Y(id) * ob_x + BGV_U_Y(id) * ob_z + off_y, z + BGV_R_Z(id) * ob_x + BGV_U_Z(id) * ob_z + off_z, rx + ob_rx, ry + ob_ry, rz + ob_rz, worldid, interiorid, playerid, streamdistance, drawdistance);
 
 			gBlockGateData[id][bgateObjectIDs][num ++] = objectid;
 		}
