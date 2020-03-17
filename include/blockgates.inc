@@ -3,7 +3,7 @@
 #endif
 #define __BGATES_INCLUDED__
 
-// --------------------------------------------------------------------- 
+// ---------------------------------------------------------------------
 
 /*
 
@@ -308,6 +308,18 @@ stock CreateBlockGate(modelid, Float:modelsize, Float:x, Float:y, Float:z, Float
 	new Float:matrix[4][4];
 	GetRotationMatrixFromEuler(matrix, rx, ry, rz, euler_samp);
 
+	// Reset vectors to 0, MatrixRotate doesn't do that
+
+	gBlockGateData[id][bgateVecFrontX] = 0.0;
+	gBlockGateData[id][bgateVecFrontY] = 0.0;
+	gBlockGateData[id][bgateVecFrontZ] = 0.0;
+	gBlockGateData[id][bgateVecRightX] = 0.0;
+	gBlockGateData[id][bgateVecRightY] = 0.0;
+	gBlockGateData[id][bgateVecRightZ] = 0.0;
+	gBlockGateData[id][bgateVecUpX] = 0.0;
+	gBlockGateData[id][bgateVecUpY] = 0.0;
+	gBlockGateData[id][bgateVecUpZ] = 0.0;
+
 	// Get the vectors for left/right, front/back and up/down directions, easier and faster for later use. Block Gates can be created at any rotation.
 
 	MatrixRotate(matrix, 0.0, modelsize, 0.0, 0.0, gBlockGateData[id][bgateVecFrontX], gBlockGateData[id][bgateVecFrontY], gBlockGateData[id][bgateVecFrontZ]);
@@ -356,7 +368,7 @@ stock DestroyBlockGate(id)
 	return 1;
 }
 
-stock AddBlockGateAnimStep(id, pattern, num_front, num_right, num_up, extra_delay = 200)
+stock AddBlockGateAnimStep(id, pattern, num_front, num_right, num_up, extra_delay = 100)
 {
 	new slot;
 
@@ -483,54 +495,25 @@ public MoveBlockGate(id, step)
 	}
 	else if(step == 0) // On the first step, we must apply the animation mode
 	{
-		switch(gBlockGateData[id][bgateAnimMode])
+		if(num_steps > 1) // Only reorder if there's more than one step
 		{
-			case BGATE_AMODE_RANDOM:
+			switch(gBlockGateData[id][bgateAnimMode])
 			{
-				for(new i = 0; i < num_steps * 3; i ++) // Randomize the anim array
+				case BGATE_AMODE_RANDOM:
 				{
-					new r1, r2;
-
-					do
+					for(new i = 0; i < num_steps * 3; i ++) // Randomize the anim array
 					{
-						r1 = random(num_steps);
-						r2 = random(num_steps);
-					}
-					while(num_steps > 1 && r1 == r2);
+						new r1, r2;
 
-					r1 *= 5;
-					r2 *= 5;
+						do
+						{
+							r1 = random(num_steps);
+							r2 = random(num_steps);
+						}
+						while(r1 == r2);
 
-					new tmp = gBlockGateData[id][bgateAnimSteps][r1]; // Pattern
-					gBlockGateData[id][bgateAnimSteps][r1] = gBlockGateData[id][bgateAnimSteps][r2];
-					gBlockGateData[id][bgateAnimSteps][r2] = tmp;
-
-					tmp = gBlockGateData[id][bgateAnimSteps][r1 + 1]; // Front
-					gBlockGateData[id][bgateAnimSteps][r1 + 1] = gBlockGateData[id][bgateAnimSteps][r2 + 1];
-					gBlockGateData[id][bgateAnimSteps][r2 + 1] = tmp;
-
-					tmp = gBlockGateData[id][bgateAnimSteps][r1 + 2]; // Right
-					gBlockGateData[id][bgateAnimSteps][r1 + 2] = gBlockGateData[id][bgateAnimSteps][r2 + 2];
-					gBlockGateData[id][bgateAnimSteps][r2 + 2] = tmp;
-
-					tmp = gBlockGateData[id][bgateAnimSteps][r1 + 3]; // Up
-					gBlockGateData[id][bgateAnimSteps][r1 + 3] = gBlockGateData[id][bgateAnimSteps][r2 + 3];
-					gBlockGateData[id][bgateAnimSteps][r2 + 3] = tmp;
-
-					tmp = gBlockGateData[id][bgateAnimSteps][r1 + 4]; // Delay
-					gBlockGateData[id][bgateAnimSteps][r1 + 4] = gBlockGateData[id][bgateAnimSteps][r2 + 4];
-					gBlockGateData[id][bgateAnimSteps][r2 + 4] = tmp;
-				}
-			}
-
-			case BGATE_AMODE_REVERSE:
-			{
-				if(gBlockGateData[id][bgateNumUsages]) // Don't invert on the very first movement (since opening should always happen in the original order)
-				{
-					for(new i = 0; i < num_steps / 2; i ++) // Invert the anim array
-					{
-						new r1 = (num_steps - i - 1) * 5,
-							r2 = i * 5;
+						r1 *= 5;
+						r2 *= 5;
 
 						new tmp = gBlockGateData[id][bgateAnimSteps][r1]; // Pattern
 						gBlockGateData[id][bgateAnimSteps][r1] = gBlockGateData[id][bgateAnimSteps][r2];
@@ -553,6 +536,38 @@ public MoveBlockGate(id, step)
 						gBlockGateData[id][bgateAnimSteps][r2 + 4] = tmp;
 					}
 				}
+
+				case BGATE_AMODE_REVERSE:
+				{
+					if(gBlockGateData[id][bgateNumUsages]) // Don't invert on the very first movement (since opening should always happen in the original order)
+					{
+						for(new i = 0; i < num_steps / 2; i ++) // Invert the anim array
+						{
+							new r1 = (num_steps - i - 1) * 5,
+								r2 = i * 5;
+
+							new tmp = gBlockGateData[id][bgateAnimSteps][r1]; // Pattern
+							gBlockGateData[id][bgateAnimSteps][r1] = gBlockGateData[id][bgateAnimSteps][r2];
+							gBlockGateData[id][bgateAnimSteps][r2] = tmp;
+
+							tmp = gBlockGateData[id][bgateAnimSteps][r1 + 1]; // Front
+							gBlockGateData[id][bgateAnimSteps][r1 + 1] = gBlockGateData[id][bgateAnimSteps][r2 + 1];
+							gBlockGateData[id][bgateAnimSteps][r2 + 1] = tmp;
+
+							tmp = gBlockGateData[id][bgateAnimSteps][r1 + 2]; // Right
+							gBlockGateData[id][bgateAnimSteps][r1 + 2] = gBlockGateData[id][bgateAnimSteps][r2 + 2];
+							gBlockGateData[id][bgateAnimSteps][r2 + 2] = tmp;
+
+							tmp = gBlockGateData[id][bgateAnimSteps][r1 + 3]; // Up
+							gBlockGateData[id][bgateAnimSteps][r1 + 3] = gBlockGateData[id][bgateAnimSteps][r2 + 3];
+							gBlockGateData[id][bgateAnimSteps][r2 + 3] = tmp;
+
+							tmp = gBlockGateData[id][bgateAnimSteps][r1 + 4]; // Delay
+							gBlockGateData[id][bgateAnimSteps][r1 + 4] = gBlockGateData[id][bgateAnimSteps][r2 + 4];
+							gBlockGateData[id][bgateAnimSteps][r2 + 4] = tmp;
+						}
+					}
+				}
 			}
 		}
 
@@ -564,7 +579,9 @@ public MoveBlockGate(id, step)
 		pattern = gBlockGateData[id][bgateAnimSteps][step * 5], 
 		num_front = gBlockGateData[id][bgateAnimSteps][step * 5 + 1],
 		num_right = gBlockGateData[id][bgateAnimSteps][step * 5 + 2],
-		num_up = gBlockGateData[id][bgateAnimSteps][step * 5 + 3];
+		num_up = gBlockGateData[id][bgateAnimSteps][step * 5 + 3],
+		width = gBlockGateData[id][bgateNumX],
+		height = gBlockGateData[id][bgateNumZ];
 
 	if(bgstate == BGATE_STATE_CLOSING) // When closing, all movements must happen in the opposite direction, thus we negate the vectors
 	{
@@ -573,11 +590,12 @@ public MoveBlockGate(id, step)
 		num_up = -num_up;
 	}
 
-	for(new ob_x = 0; ob_x < gBlockGateData[id][bgateNumX]; ob_x ++)
+	for(new ob_x = 0; ob_x < width ; ob_x ++)
 	{
-		new bool:right_side = (ob_x < gBlockGateData[id][bgateNumX] / 2);
+		new bool:right_side = (ob_x < width / 2),
+			dx = (right_side ? ob_x + 1 : ob_x);
 
-		for(new ob_z = 0; ob_z < gBlockGateData[id][bgateNumZ]; ob_z ++)
+		for(new ob_z = 0; ob_z < height; ob_z ++)
 		{
 			new num_front_f = num_front,
 				num_right_f = num_right,
@@ -592,7 +610,7 @@ public MoveBlockGate(id, step)
 						num_front_f *= 2;
 					}
 
-					if(ob_x % 2 == 0) // Up vector gets increased or zero'd for every second object on the X axis
+					if(dx % 2 == 0) // Up vector gets increased or zero'd for every second object on the X axis
 					{
 						num_up_f *= 2;
 					}
@@ -600,7 +618,7 @@ public MoveBlockGate(id, step)
 				}
 				case 2:
 				{
-					if((ob_x % 2) == (ob_z % 2)) // Idk, looks cool
+					if((dx % 2) == (ob_z % 2)) // Idk, looks cool
 					{
 						num_front_f *= 2;
 						num_up_f *= 2;
