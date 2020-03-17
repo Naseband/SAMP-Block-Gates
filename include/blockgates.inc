@@ -23,7 +23,7 @@
 	CreateBlockGate(modelid, Float:modelsize, Float:x, Float:y, Float:z, Float:rx, Float:ry, Float:rz, width = 8, height = 4, Float:speed = 1.0, Float:areasize = 10.0, worldid = 0, interiorid = 0, playerid = -1, Float:streamdistance = 250.0, Float:drawdistance = 250.0, Float:ob_rx = FLOAT_INFINITY, Float:ob_ry = FLOAT_INFINITY, Float:ob_rz = FLOAT_INFINITY, Float:ob_side_off_mul = 0.5)
 	DestroyBlockGate(id)
 
-	AddBlockGateAnimStep(id, pattern, num_front, num_right, num_up, extra_delay = 200)
+	AddBlockGateAnimStep(id, pattern, num_right, num_front, num_up, extra_delay = 200, Float:speed_mul = 1.0)
 	SetBlockGateAnimMode(id, mode)
 
 	SetBlockGateObjectMaterial(id, materialindex, modelid_a, const modelname_a[], const texturename_a[], color_a = 0, modelid_b = -1, const modelname_b[] = "", const texturename_b[] = "", color_b = 0)
@@ -31,8 +31,8 @@
 	OpenBlockGate(id, delay = 0)
 	CloseBlockGate(id, delay = 0)
 
-	GetBlockGateFrontVector(id, &Float:vx, &Float:vy, &Float:vz)
 	GetBlockGateRightVector(id, &Float:vx, &Float:vy, &Float:vz)
+	GetBlockGateFrontVector(id, &Float:vx, &Float:vy, &Float:vz)
 	GetBlockGateUpVector(id, &Float:vx, &Float:vy, &Float:vz)
 
 
@@ -113,7 +113,13 @@ enum E_BLOCK_GATE
 	bgateObjectIDs[MAX_BLOCK_GATE_OBJECTS],
 	bgateNumObjects,
 
-	bgateAnimSteps[MAX_BLOCK_GATE_ANIM_STEPS * 5],
+	bgateAnimStepPattern[MAX_BLOCK_GATE_ANIM_STEPS],
+	bgateAnimStepNumRight[MAX_BLOCK_GATE_ANIM_STEPS],
+	bgateAnimStepNumFront[MAX_BLOCK_GATE_ANIM_STEPS],
+	bgateAnimStepNumUp[MAX_BLOCK_GATE_ANIM_STEPS],
+	bgateAnimStepDelay[MAX_BLOCK_GATE_ANIM_STEPS],
+	Float:bgateAnimStepSpeedMul[MAX_BLOCK_GATE_ANIM_STEPS],
+
 	bgateNumAnimSteps,
 	bgateAnimMode,
 	bgateNumUsages
@@ -368,19 +374,19 @@ stock DestroyBlockGate(id)
 	return 1;
 }
 
-stock AddBlockGateAnimStep(id, pattern, num_front, num_right, num_up, extra_delay = 100)
+stock AddBlockGateAnimStep(id, pattern, num_right, num_front, num_up, extra_delay = 100, Float:speed_mul = 1.0)
 {
 	new slot;
 
 	if((slot = gBlockGateData[id][bgateNumAnimSteps]) == MAX_BLOCK_GATE_ANIM_STEPS) return 0;
 
-	slot *= 5;
-
-	gBlockGateData[id][bgateAnimSteps][slot] = pattern;
-	gBlockGateData[id][bgateAnimSteps][slot + 1] = num_front;
-	gBlockGateData[id][bgateAnimSteps][slot + 2] = num_right;
-	gBlockGateData[id][bgateAnimSteps][slot + 3] = num_up;
-	gBlockGateData[id][bgateAnimSteps][slot + 4] = extra_delay;
+	gBlockGateData[id][bgateAnimStepPattern][slot] = pattern;
+	gBlockGateData[id][bgateAnimStepNumRight][slot] = num_right;
+	gBlockGateData[id][bgateAnimStepNumFront][slot] = num_front;
+	gBlockGateData[id][bgateAnimStepNumUp][slot] = num_up;
+	gBlockGateData[id][bgateAnimStepDelay][slot] = extra_delay;
+	
+	gBlockGateData[id][bgateAnimStepSpeedMul][slot] = speed_mul;
 
 	gBlockGateData[id][bgateNumAnimSteps] ++;
 
@@ -512,28 +518,29 @@ public MoveBlockGate(id, step)
 						}
 						while(r1 == r2);
 
-						r1 *= 5;
-						r2 *= 5;
+						new tmp = gBlockGateData[id][bgateAnimStepPattern][r1]; // Pattern
+						gBlockGateData[id][bgateAnimStepPattern][r1] = gBlockGateData[id][bgateAnimStepPattern][r2];
+						gBlockGateData[id][bgateAnimStepPattern][r2] = tmp;
 
-						new tmp = gBlockGateData[id][bgateAnimSteps][r1]; // Pattern
-						gBlockGateData[id][bgateAnimSteps][r1] = gBlockGateData[id][bgateAnimSteps][r2];
-						gBlockGateData[id][bgateAnimSteps][r2] = tmp;
+						tmp = gBlockGateData[id][bgateAnimStepNumRight][r1]; // Right
+						gBlockGateData[id][bgateAnimStepNumRight][r1] = gBlockGateData[id][bgateAnimStepNumRight][r2];
+						gBlockGateData[id][bgateAnimStepNumRight][r2] = tmp;
 
-						tmp = gBlockGateData[id][bgateAnimSteps][r1 + 1]; // Front
-						gBlockGateData[id][bgateAnimSteps][r1 + 1] = gBlockGateData[id][bgateAnimSteps][r2 + 1];
-						gBlockGateData[id][bgateAnimSteps][r2 + 1] = tmp;
+						tmp = gBlockGateData[id][bgateAnimStepNumFront][r1]; // Front
+						gBlockGateData[id][bgateAnimStepNumFront][r1] = gBlockGateData[id][bgateAnimStepNumFront][r2];
+						gBlockGateData[id][bgateAnimStepNumFront][r2] = tmp;
 
-						tmp = gBlockGateData[id][bgateAnimSteps][r1 + 2]; // Right
-						gBlockGateData[id][bgateAnimSteps][r1 + 2] = gBlockGateData[id][bgateAnimSteps][r2 + 2];
-						gBlockGateData[id][bgateAnimSteps][r2 + 2] = tmp;
+						tmp = gBlockGateData[id][bgateAnimStepNumUp][r1]; // Up
+						gBlockGateData[id][bgateAnimStepNumUp][r1] = gBlockGateData[id][bgateAnimStepNumUp][r2];
+						gBlockGateData[id][bgateAnimStepNumUp][r2] = tmp;
 
-						tmp = gBlockGateData[id][bgateAnimSteps][r1 + 3]; // Up
-						gBlockGateData[id][bgateAnimSteps][r1 + 3] = gBlockGateData[id][bgateAnimSteps][r2 + 3];
-						gBlockGateData[id][bgateAnimSteps][r2 + 3] = tmp;
+						tmp = gBlockGateData[id][bgateAnimStepDelay][r1]; // Delay
+						gBlockGateData[id][bgateAnimStepDelay][r1] = gBlockGateData[id][bgateAnimStepDelay][r2];
+						gBlockGateData[id][bgateAnimStepDelay][r2] = tmp;
 
-						tmp = gBlockGateData[id][bgateAnimSteps][r1 + 4]; // Delay
-						gBlockGateData[id][bgateAnimSteps][r1 + 4] = gBlockGateData[id][bgateAnimSteps][r2 + 4];
-						gBlockGateData[id][bgateAnimSteps][r2 + 4] = tmp;
+						tmp = _:gBlockGateData[id][bgateAnimStepSpeedMul][r1]; // Speed
+						gBlockGateData[id][bgateAnimStepSpeedMul][r1] = gBlockGateData[id][bgateAnimStepSpeedMul][r2];
+						gBlockGateData[id][bgateAnimStepSpeedMul][r2] = Float:tmp;
 					}
 				}
 
@@ -543,28 +550,32 @@ public MoveBlockGate(id, step)
 					{
 						for(new i = 0; i < num_steps / 2; i ++) // Invert the anim array
 						{
-							new r1 = (num_steps - i - 1) * 5,
-								r2 = i * 5;
+							new r1 = num_steps - i - 1,
+								r2 = i;
 
-							new tmp = gBlockGateData[id][bgateAnimSteps][r1]; // Pattern
-							gBlockGateData[id][bgateAnimSteps][r1] = gBlockGateData[id][bgateAnimSteps][r2];
-							gBlockGateData[id][bgateAnimSteps][r2] = tmp;
+							new tmp = gBlockGateData[id][bgateAnimStepPattern][r1]; // Pattern
+							gBlockGateData[id][bgateAnimStepPattern][r1] = gBlockGateData[id][bgateAnimStepPattern][r2];
+							gBlockGateData[id][bgateAnimStepPattern][r2] = tmp;
 
-							tmp = gBlockGateData[id][bgateAnimSteps][r1 + 1]; // Front
-							gBlockGateData[id][bgateAnimSteps][r1 + 1] = gBlockGateData[id][bgateAnimSteps][r2 + 1];
-							gBlockGateData[id][bgateAnimSteps][r2 + 1] = tmp;
+							tmp = gBlockGateData[id][bgateAnimStepNumRight][r1]; // Right
+							gBlockGateData[id][bgateAnimStepNumRight][r1] = gBlockGateData[id][bgateAnimStepNumRight][r2];
+							gBlockGateData[id][bgateAnimStepNumRight][r2] = tmp;
 
-							tmp = gBlockGateData[id][bgateAnimSteps][r1 + 2]; // Right
-							gBlockGateData[id][bgateAnimSteps][r1 + 2] = gBlockGateData[id][bgateAnimSteps][r2 + 2];
-							gBlockGateData[id][bgateAnimSteps][r2 + 2] = tmp;
+							tmp = gBlockGateData[id][bgateAnimStepNumFront][r1]; // Front
+							gBlockGateData[id][bgateAnimStepNumFront][r1] = gBlockGateData[id][bgateAnimStepNumFront][r2];
+							gBlockGateData[id][bgateAnimStepNumFront][r2] = tmp;
 
-							tmp = gBlockGateData[id][bgateAnimSteps][r1 + 3]; // Up
-							gBlockGateData[id][bgateAnimSteps][r1 + 3] = gBlockGateData[id][bgateAnimSteps][r2 + 3];
-							gBlockGateData[id][bgateAnimSteps][r2 + 3] = tmp;
+							tmp = gBlockGateData[id][bgateAnimStepNumUp][r1]; // Up
+							gBlockGateData[id][bgateAnimStepNumUp][r1] = gBlockGateData[id][bgateAnimStepNumUp][r2];
+							gBlockGateData[id][bgateAnimStepNumUp][r2] = tmp;
 
-							tmp = gBlockGateData[id][bgateAnimSteps][r1 + 4]; // Delay
-							gBlockGateData[id][bgateAnimSteps][r1 + 4] = gBlockGateData[id][bgateAnimSteps][r2 + 4];
-							gBlockGateData[id][bgateAnimSteps][r2 + 4] = tmp;
+							tmp = gBlockGateData[id][bgateAnimStepDelay][r1]; // Delay
+							gBlockGateData[id][bgateAnimStepDelay][r1] = gBlockGateData[id][bgateAnimStepDelay][r2];
+							gBlockGateData[id][bgateAnimStepDelay][r2] = tmp;
+
+							tmp = _:gBlockGateData[id][bgateAnimStepSpeedMul][r1]; // Speed
+							gBlockGateData[id][bgateAnimStepSpeedMul][r1] = gBlockGateData[id][bgateAnimStepSpeedMul][r2];
+							gBlockGateData[id][bgateAnimStepSpeedMul][r2] = Float:tmp;
 						}
 					}
 				}
@@ -574,19 +585,19 @@ public MoveBlockGate(id, step)
 		gBlockGateData[id][bgateNumUsages] ++;
 	}
 
-	new Float:speed = gBlockGateData[id][bgateSpeed],
+	new Float:speed = gBlockGateData[id][bgateSpeed] * gBlockGateData[id][bgateAnimStepSpeedMul][step],
 		num,
-		pattern = gBlockGateData[id][bgateAnimSteps][step * 5], 
-		num_front = gBlockGateData[id][bgateAnimSteps][step * 5 + 1],
-		num_right = gBlockGateData[id][bgateAnimSteps][step * 5 + 2],
-		num_up = gBlockGateData[id][bgateAnimSteps][step * 5 + 3],
+		pattern = gBlockGateData[id][bgateAnimStepPattern][step], 
+		num_right = gBlockGateData[id][bgateAnimStepNumRight][step],
+		num_front = gBlockGateData[id][bgateAnimStepNumFront][step],
+		num_up = gBlockGateData[id][bgateAnimStepNumUp][step],
 		width = gBlockGateData[id][bgateNumX],
 		height = gBlockGateData[id][bgateNumZ];
 
 	if(bgstate == BGATE_STATE_CLOSING) // When closing, all movements must happen in the opposite direction, thus we negate the vectors
 	{
-		num_front = -num_front;
 		num_right = -num_right;
+		num_front = -num_front;
 		num_up = -num_up;
 	}
 
@@ -626,9 +637,9 @@ public MoveBlockGate(id, step)
 				}
 			}
 
-			new Float:off_x = BGV_F_X(id) * num_front_f + BGV_R_X(id) * (right_side ? num_right_f : -num_right_f) + BGV_U_X(id) * num_up_f, // Calculate the offset for this object
-				Float:off_y = BGV_F_Y(id) * num_front_f + BGV_R_Y(id) * (right_side ? num_right_f : -num_right_f) + BGV_U_Y(id) * num_up_f,
-				Float:off_z = BGV_F_Z(id) * num_front_f + BGV_R_Z(id) * (right_side ? num_right_f : -num_right_f) + BGV_U_Z(id) * num_up_f,
+			new Float:off_x = BGV_R_X(id) * (right_side ? num_right_f : -num_right_f) + BGV_F_X(id) * num_front_f + BGV_U_X(id) * num_up_f, // Calculate the offset for this object
+				Float:off_y = BGV_R_Y(id) * (right_side ? num_right_f : -num_right_f) + BGV_F_Y(id) * num_front_f + BGV_U_Y(id) * num_up_f,
+				Float:off_z = BGV_R_Z(id) * (right_side ? num_right_f : -num_right_f) + BGV_F_Z(id) * num_front_f + BGV_U_Z(id) * num_up_f,
 				Float:x, Float:y, Float:z;
 
 			GetDynamicObjectPos(gBlockGateData[id][bgateObjectIDs][num], x, y, z);
@@ -641,7 +652,7 @@ public MoveBlockGate(id, step)
 
 	// Set a timer for the next step, the time is based on the speed and the current step's delay (objects always move 1 second divided by the speed)
 
-	SetTimerEx("MoveBlockGate", floatround(1000.0 / speed) + gBlockGateData[id][bgateAnimSteps][step * 5 + 4], 0, "ii", id, step + 1);
+	SetTimerEx("MoveBlockGate", floatround(1000.0 / speed) + gBlockGateData[id][bgateAnimStepDelay][step], 0, "ii", id, step + 1);
 
 	return 1;
 }
